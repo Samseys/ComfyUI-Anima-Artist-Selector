@@ -13,7 +13,7 @@ A visual artist selector for Anima workflows. It outputs a single artist handle 
 - Export handles and Explorer-compatible favorites.
 - Use the native compact controls in mobile/non-canvas frontends.
 
-Preview images are loaded on demand from the public `ThetaCursed/Anima-Assets` CDN. They are not included in this repository.
+Preview images are loaded on demand from the public `ThetaCursed/Anima-Assets` CDN. They are not included in this repository. The generated artist catalog is conditionally refreshed from the upstream Anima Style Explorer on startup and cached as `web/artist-map.json`; ETag and Last-Modified headers avoid downloading unchanged data.
 
 ## Installation
 
@@ -42,7 +42,7 @@ web/lib/catalog.js          Shared catalog loading, search, and seeded selection
 web/lib/favorites.js        Shared favorite API and live-update client
 web/browse.html             Standalone responsive library
 web/icons/                  Locally bundled Lucide assets
-web/artist-map.json         Artist metadata index
+web/artist-map.json         Downloaded artist metadata cache (Git-ignored)
 data/                       Runtime library and favorites (not committed)
 ```
 

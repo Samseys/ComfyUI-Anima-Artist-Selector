@@ -14,3 +14,8 @@ Thumbs.db
 data/*.json
 !data/*.example.json
 !data/.gitkeep
+
+# Downloaded catalog cache (created automatically on first startup)
+web/artist-map.json
+web/artist-map.json.download
+web/artist-map.json.meta

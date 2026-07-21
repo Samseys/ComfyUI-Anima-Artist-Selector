@@ -1,5 +1,7 @@
 import asyncio
 import json
+import urllib.error
+import urllib.request
 import zlib
 from pathlib import Path
 
@@ -12,12 +14,72 @@ DATA_DIR = BASE / "data"
 LIBRARY_FILE = DATA_DIR / "artists.json"
 FAVORITES_FILE = DATA_DIR / "favorites.json"
 INDEX_FILE = BASE / "web" / "artist-map.json"
+INDEX_DOWNLOAD_FILE = INDEX_FILE.with_suffix(".json.download")
+INDEX_META_FILE = INDEX_FILE.with_suffix(".json.meta")
+INDEX_URL = "https://raw.githubusercontent.com/ThetaCursed/Anima-Style-Explorer/main/app/data.js"
 BROWSE_FILE = BASE / "web" / "browse.html"
 DEFAULTS = [
     "ask \\(askzy\\)", "mika pikazo", "namie-kun", "alchemaniac", "rynzfrancis",
     "cenm0", "yamasina009", "houraku", "kusunokimizuha",
 ]
 FAVORITE_SUBSCRIBERS = set()
+
+
+def _refresh_artist_index():
+    """Conditionally refresh the generated catalog from the upstream explorer."""
+    INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        metadata = json.loads(INDEX_META_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        metadata = {}
+
+    headers = {"User-Agent": "ComfyUI-Anima-Artist-Selector"}
+    if metadata.get("etag"):
+        headers["If-None-Match"] = metadata["etag"]
+    if metadata.get("last_modified"):
+        headers["If-Modified-Since"] = metadata["last_modified"]
+
+    try:
+        request = urllib.request.Request(INDEX_URL, headers=headers)
+        with urllib.request.urlopen(request, timeout=20) as response:
+            source = response.read().decode("utf-8-sig")
+            etag = response.headers.get("ETag")
+            last_modified = response.headers.get("Last-Modified")
+
+        prefix = "const galleryData ="
+        if not source.lstrip().startswith(prefix) or not source.rstrip().endswith(";"):
+            raise ValueError("upstream artist data has an unexpected format")
+        payload = source.lstrip()[len(prefix):].strip()[:-1].strip()
+        items = json.loads(payload)
+        if not isinstance(items, list) or not items:
+            raise ValueError("upstream artist catalog is empty")
+        catalog = {
+            str(item["id"]): item
+            for item in items
+            if isinstance(item, dict) and item.get("id") is not None and item.get("name")
+        }
+        if not catalog:
+            raise ValueError("upstream artist catalog contains no valid artists")
+
+        INDEX_DOWNLOAD_FILE.write_text(
+            json.dumps(catalog, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        INDEX_DOWNLOAD_FILE.replace(INDEX_FILE)
+        INDEX_META_FILE.write_text(
+            json.dumps({"etag": etag, "last_modified": last_modified}, indent=2),
+            encoding="utf-8",
+        )
+        print(f"[Anima Artist Selector] Updated artist catalog ({len(catalog):,} artists)")
+    except urllib.error.HTTPError as error:
+        if error.code != 304:
+            print(f"[Anima Artist Selector] Could not update artist catalog: {error}")
+    except Exception as error:
+        INDEX_DOWNLOAD_FILE.unlink(missing_ok=True)
+        print(f"[Anima Artist Selector] Could not update artist catalog: {error}")
+
+
+_refresh_artist_index()
 
 
 def _clean(value):
