@@ -80,10 +80,14 @@ function openPicker(selectArtist, favoriteNames = null) {
     };
     const appendPickerPage = () => {
         if (renderedCount >= activeItems.length) return;
-        const page = activeItems.slice(renderedCount, renderedCount + PAGE_SIZE), start = renderedCount;
-        renderedCount += page.length;
         const holder = document.createElement("div");
         holder.className = "samsey-anima-picker-chunk";
+        const sentinel = results.querySelector(".samsey-anima-sentinel");
+        results.insertBefore(holder, sentinel);
+        const columns = Math.max(1, getComputedStyle(holder).gridTemplateColumns.split(" ").filter(Boolean).length);
+        const pageSize = columns * Math.ceil(PAGE_SIZE / columns);
+        const page = activeItems.slice(renderedCount, renderedCount + pageSize), start = renderedCount;
+        renderedCount += page.length;
         holder._items = page;
         holder._start = start;
         holder._render = restored => {
@@ -92,8 +96,6 @@ function openPicker(selectArtist, favoriteNames = null) {
             bindPickerCards(holder);
         };
         holder._render(false);
-        const sentinel = results.querySelector(".samsey-anima-sentinel");
-        results.insertBefore(holder, sentinel);
         virtualObserver.observe(holder);
         requestAnimationFrame(() => {
             if (renderedCount < activeItems.length && sentinel?.getBoundingClientRect().top <= results.getBoundingClientRect().bottom + 900) appendPickerPage();
