@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
+
+# User-managed runtime state
+data/*.json
+!data/*.example.json
+!data/.gitkeep
