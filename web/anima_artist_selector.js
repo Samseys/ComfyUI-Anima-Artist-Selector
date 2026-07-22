@@ -245,7 +245,20 @@ app.registerExtension({
 
             const copyHandle = async () => {
                 const name = currentName();
-                if (name) await navigator.clipboard.writeText("@" + name);
+                if (!name) return;
+                const text = "@" + name;
+                // navigator.clipboard only works in secure contexts (HTTPS/localhost); over a
+                // plain-HTTP LAN IP it is undefined, so fall back to textarea + execCommand.
+                if (navigator.clipboard && window.isSecureContext) {
+                    try { await navigator.clipboard.writeText(text); return; } catch {}
+                }
+                const ta = document.createElement("textarea");
+                ta.value = text; ta.setAttribute("readonly", "");
+                ta.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
+                document.body.appendChild(ta); ta.focus(); ta.select();
+                try { ta.setSelectionRange(0, text.length); } catch {}
+                try { document.execCommand("copy"); } catch {}
+                ta.remove();
             };
             const updateFavorite = () => {
                 const on = favorites.has(currentName().toLowerCase());
